@@ -4,7 +4,7 @@
   "description": "Verificador de email simples usando redis",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon index.js"
   },
   "author": "kotzuo",
   "license": "ISC",
