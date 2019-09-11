@@ -5,26 +5,8 @@ const redisClient = redis.createClient()
 const nodemailer = require('nodemailer')
 
 const crypto = require('crypto')
-const algorithm = 'aes-256-cbc'
-const key = crypto.randomBytes(32)
-const iv = crypto.randomBytes(16)
-
-const encrypt = (text) => 
-{
-    const cipher = crypto.createCipheriv(algorithm, Buffer.from(key), iv);
-    let encrypted = cipher.update(text);
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-    return encrypted.toString('hex');
-}
-
-const decrypt = (text) =>
-{
-    const encryptedText = Buffer.from(text, 'hex');
-    const decipher = crypto.createDecipheriv(algorithm, Buffer.from(key), iv);
-    let decrypted = decipher.update(encryptedText);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString();
-}
+const cryptography = require('./cryptography')
+const crypt = new cryptography(crypto.randomBytes(16), crypto.randomBytes(32), 'aes-256-cbc')
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -47,7 +29,7 @@ redisClient.on('connect', () =>
 httpServer.get('/cadastrar/:email', (req, res) =>
 {
     const { email } = req.params
-    const encryptedEmail = encrypt(email)
+    const encryptedEmail = crypt.encrypt(email)
     redisClient.sismember('encrypted-to-confirm-emails', encryptedEmail, (err, data) =>
     {
         if(data === 0)
@@ -78,7 +60,7 @@ httpServer.get('/cadastrar/:email', (req, res) =>
 httpServer.get('/confirmar/:encriptedEmail', (req, res) =>
 {
     const { encriptedEmail } = req.params
-    const decryptedEmail = decrypt(encriptedEmail)
+    const decryptedEmail = crypt.decrypt(encriptedEmail)
 
     redisClient.srem('encrypted-to-confirm-emails', encriptedEmail, function(err, data){
         if(data)

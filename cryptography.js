@@ -1,4 +1,6 @@
-export class Crypt
+const crypto = require('crypto')
+
+module.exports = class Crypt
 {
     constructor(iv, key, algorithm)
     {
@@ -17,10 +19,17 @@ export class Crypt
 
     decrypt(text)
     {
-        const encryptedText = Buffer.from(text, 'hex');
-        const decipher = crypto.createDecipheriv(this.algorithm, Buffer.from(this.key), this.iv);
-        let decrypted = decipher.update(encryptedText);
-        decrypted = Buffer.concat([decrypted, decipher.final()]);
-        return decrypted.toString();
+        try
+        {
+            const encryptedText = Buffer.from(text, 'hex');
+            const decipher = crypto.createDecipheriv(this.algorithm, Buffer.from(this.key), this.iv);
+            let decrypted = decipher.update(encryptedText);
+            decrypted = Buffer.concat([decrypted, decipher.final()]);
+            return decrypted.toString();
+        }
+        catch(e)
+        {
+            console.log('Erro durante a descriptografia')
+        }
     }
 }
