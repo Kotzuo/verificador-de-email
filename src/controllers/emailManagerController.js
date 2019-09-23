@@ -1,57 +1,55 @@
-const redis = require('redis')
-const redisClient = redis.createClient()
-const crypto = require('crypto')
-
 const mail = require('../mail')
-const crypt = require('../cryptography')
-crypt.crypt(crypto.randomBytes(16), crypto.randomBytes(32), 'aes-256-cbc')
+const validate = require('../validate-json').validate
+const userRequest = require('../models/userRequestModel')
+const randomstring = require('randomstring')
 
-exports.register = (req, res) =>
+module.exports =
 {
-    const { email } = req.params
-    const encryptedEmail = crypt.encrypt(email)
-    redisClient.sismember('encrypted-to-confirm-emails', encryptedEmail, (err, data) =>
+    async store(req, res)
     {
-        if(data === 0)
+        const { body } = req;
+        
+        if(validate(body))
         {
-            redisClient.sismember('confirmed-emails', email, (err, data) =>
+            const userRequestSearch = await userRequest.findOne(body)
+            if(!userRequestSearch)
             {
-                if(data === 0)
-                {
-                    redisClient.sadd('encrypted-to-confirm-emails', encryptedEmail)
-                    mail.sendEmail(email, 'Confirmação do email', 
-                    `<a target="_blank" href="${'http://localhost:3000/confirm/' + encryptedEmail}">Link para confirmação!</a>`)
-                    res.send('Email de confirmação enviado!')
-                }
-                else
-                {
-                    res.send('Email já cadastrado no sistema!')
-                }
-            })
+                const token = randomstring.generate()
+                await userRequest.create({
+                    name: body.name,
+                    email: body.email,
+                    password: body.password,
+                    token
+                })
+                mail.sendEmail(body.email, 'Confirmação de email', `<a href="http://localhost:3000/confirm?token=${token}">Clique aqui para confirmar!</a>`)
+                
+                return res.json({ status: 'SUCCESSFUL', data: body })
+            }
+            else
+                return res.json({ status: 'ALREADY_EXISTS', data: body })
         }
         else
-        {
-            res.send('Já foi mandado um pedido de confirmação para esse email!')
-        }
-    })
-}
+            return res.json({ status: 'INVALID', data: body })
+    },
 
-exports.validate = (req, res) =>
-{
-    const { encriptedEmail } = req.params
-    const decryptedEmail = crypt.decrypt(encriptedEmail)
-
-    redisClient.srem('encrypted-to-confirm-emails', encriptedEmail, (err, data) =>
+    async validate(req, res)
     {
-        if(data)
+        const { token } = req.query
+        if(!token)
         {
-            console.log("Email " + decryptedEmail + " confirmado!")
-            redisClient.sadd('confirmed-emails', decryptedEmail)
-            res.send('Email confirmado!')
+            return res.json({ status: 'MISSING_TOKEN_QUERY', token: '' })
         }
         else
         {
-            res.send('Token inválido')
+            const userRequestSearch = await userRequest.findOneAndDelete({ token })
+            if(userRequestSearch)
+            {
+                //Cadastro
+                console.log(userRequestSearch)
+                return res.json({ status: 'CONFIRMED_USER', token })
+            }
+            else
+                return res.json({ status: 'NONEXISTENT_USER_REQUEST', token })
         }
-    })
+    }
 }

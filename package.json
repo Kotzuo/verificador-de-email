@@ -1,7 +1,7 @@
 {
   "name": "verificador-de-email",
   "version": "1.0.0",
-  "description": "Verificador de email simples usando redis",
+  "description": "Verificador de email simples usando mongodb",
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.js"
@@ -9,7 +9,11 @@
   "author": "kotzuo",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^8.1.0",
     "express": "^4.17.1",
+    "mongoose": "^5.7.1",
+    "nodemailer": "^6.3.0",
+    "randomstring": "^1.1.5",
     "redis": "^2.8.0"
   }
 }
